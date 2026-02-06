@@ -48,15 +48,21 @@ const matGoal = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.6
 
 // --- Assets
 const loader = new GLTFLoader();
+const BASE = import.meta.env.BASE_URL || '/';
+const THEME = 'blue'; // KayKit color theme: blue|green|red|yellow|neutral
+
 const ASSETS = {
-  character: '/assets/kenney/models/character.glb',
-  coin: '/assets/kenney/models/coin.glb',
-  flag: '/assets/kenney/models/flag.glb',
-  platform: '/assets/kenney/models/platform.glb',
-  platformMedium: '/assets/kenney/models/platform-medium.glb',
-  platformLarge: '/assets/kenney/models/platform-large.glb',
-  brick: '/assets/kenney/models/brick.glb',
-  blockCoin: '/assets/kenney/models/block-coin.glb',
+  // Kenney (character) fallback
+  kenneyCharacter: `${BASE}assets/kenney/models/character.glb`,
+
+  // KayKit Platformer Pack (CC0)
+  kaykit: {
+    platform4x2x2: `${BASE}assets/kaykit/Assets/gltf/${THEME}/platform_4x2x2_${THEME}.gltf`,
+    platform4x2x1: `${BASE}assets/kaykit/Assets/gltf/${THEME}/platform_4x2x1_${THEME}.gltf`,
+    platform6x2x2: `${BASE}assets/kaykit/Assets/gltf/${THEME}/platform_6x2x2_${THEME}.gltf`,
+    coinLike: `${BASE}assets/kaykit/Assets/gltf/${THEME}/diamond_${THEME}.gltf`,
+    goalFlag: `${BASE}assets/kaykit/Assets/gltf/${THEME}/flag_A_${THEME}.gltf`,
+  },
 };
 
 const glbCache = new Map();
@@ -118,7 +124,7 @@ function addSolid(mesh){
 async function addCoin(pos){
   let mesh;
   try {
-    mesh = await loadGLB(ASSETS.coin);
+    mesh = await loadGLB(ASSETS.kaykit.coinLike);
   } catch {
     mesh = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.10, 10, 18), matCoin);
     mesh.rotation.x = Math.PI/2;
@@ -143,7 +149,7 @@ function addEnemy(pos, range=3.0, speed=1.2){
 async function addGoal(pos){
   let mesh;
   try {
-    mesh = await loadGLB(ASSETS.flag);
+    mesh = await loadGLB(ASSETS.kaykit.goalFlag);
   } catch {
     mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 2.4, 12), matGoal);
   }
@@ -187,7 +193,9 @@ async function buildLevel(){
 
     // Visual model (best effort)
     try {
-      const url = kind === 'large' ? ASSETS.platformLarge : (kind === 'small' ? ASSETS.platform : ASSETS.platformMedium);
+      const url = kind === 'large'
+        ? ASSETS.kaykit.platform6x2x2
+        : (kind === 'small' ? ASSETS.kaykit.platform4x2x1 : ASSETS.kaykit.platform4x2x2);
       const vis = await loadGLB(url);
       vis.position.set(x, y - 0.3, z);
       vis.scale.setScalar(1.0);
@@ -232,7 +240,7 @@ let playerModel = null;
 async function ensurePlayerModel(){
   if (playerModel) return;
   try {
-    playerModel = await loadGLB(ASSETS.character);
+    playerModel = await loadGLB(ASSETS.kenneyCharacter);
     playerModel.scale.setScalar(1.0);
     scene.add(playerModel);
   } catch {
