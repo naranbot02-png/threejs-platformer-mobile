@@ -6,6 +6,19 @@ const $coins = document.getElementById('coins');
 const $deaths = document.getElementById('deaths');
 const $tip = document.getElementById('centerTip');
 
+// Touch controls DOM
+const $touch = document.getElementById('touch');
+const $stickBase = document.getElementById('stickBase');
+const $stick = document.getElementById('stick');
+const $btnJump = document.getElementById('btnJump');
+const $btnRestart = document.getElementById('btnRestart');
+
+const isTouch = matchMedia('(pointer: coarse)').matches;
+if (!isTouch) {
+  // keep touch overlay hidden for desktop
+  if ($touch) $touch.style.display = 'none';
+}
+
 // --- Renderer / Scene / Camera
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -271,15 +284,72 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
 
-let pointerLocked = false;
-renderer.domElement.addEventListener('click', () => {
-  renderer.domElement.requestPointerLock?.();
-});
+// Touch state
+const touchState = {
+  moveX: 0, // -1..1
+  jump: false,
+};
 
-document.addEventListener('pointerlockchange', () => {
-  pointerLocked = document.pointerLockElement === renderer.domElement;
-  $tip.style.display = pointerLocked ? 'none' : 'block';
-});
+if ($btnJump) {
+  const down = (e) => { e.preventDefault(); touchState.jump = true; };
+  const up = (e) => { e.preventDefault(); touchState.jump = false; };
+  $btnJump.addEventListener('pointerdown', down);
+  addEventListener('pointerup', up);
+  addEventListener('pointercancel', up);
+}
+if ($btnRestart) {
+  $btnRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); resetRun(); });
+}
+
+// Virtual joystick
+let stickPointerId = null;
+let stickCenter = { x: 0, y: 0 };
+function setStick(dx, dy) {
+  const max = 46;
+  const len = Math.hypot(dx, dy);
+  const k = len > max ? (max / len) : 1;
+  const sx = dx * k;
+  const sy = dy * k;
+  if ($stick) $stick.style.transform = `translate(${sx}px, ${sy}px) translate(-50%, -50%)`;
+  touchState.moveX = clamp(sx / max, -1, 1);
+}
+if ($stickBase) {
+  $stickBase.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    stickPointerId = e.pointerId;
+    $stickBase.setPointerCapture?.(stickPointerId);
+    const r = $stickBase.getBoundingClientRect();
+    stickCenter = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    setStick(e.clientX - stickCenter.x, e.clientY - stickCenter.y);
+  });
+  $stickBase.addEventListener('pointermove', (e) => {
+    if (stickPointerId !== e.pointerId) return;
+    e.preventDefault();
+    setStick(e.clientX - stickCenter.x, e.clientY - stickCenter.y);
+  });
+  const end = (e) => {
+    if (stickPointerId !== e.pointerId) return;
+    e.preventDefault();
+    stickPointerId = null;
+    if ($stick) $stick.style.transform = 'translate(-50%, -50%)';
+    touchState.moveX = 0;
+  };
+  $stickBase.addEventListener('pointerup', end);
+  $stickBase.addEventListener('pointercancel', end);
+}
+
+// Pointer lock only on desktop
+let pointerLocked = false;
+if (!isTouch) {
+  renderer.domElement.addEventListener('click', () => {
+    renderer.domElement.requestPointerLock?.();
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    pointerLocked = document.pointerLockElement === renderer.domElement;
+    if ($tip) $tip.style.display = pointerLocked ? 'none' : 'block';
+  });
+}
 
 let yaw = 0;
 let pitch = -0.15;
@@ -436,8 +506,11 @@ function tick(){
   let ax = 0;
   if (keys.has('KeyA') || keys.has('ArrowLeft')) ax -= 1;
   if (keys.has('KeyD') || keys.has('ArrowRight')) ax += 1;
+  // Touch joystick
+  ax += touchState.moveX;
+  ax = clamp(ax, -1, 1);
 
-  const wantJump = keys.has('Space') || keys.has('KeyW') || keys.has('ArrowUp');
+  const wantJump = keys.has('Space') || keys.has('KeyW') || keys.has('ArrowUp') || touchState.jump;
 
   // Apply horizontal accel
   playerState.vel.x += ax * MOVE_SPEED * dt * 10;

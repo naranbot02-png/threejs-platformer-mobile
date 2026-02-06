@@ -21,6 +21,48 @@
         color: #e5e7eb;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       }
+
+      /* Touch controls */
+      #touch {
+        position: fixed; inset: 0; pointer-events: none; z-index: 20;
+        display: none;
+      }
+      #stickBase {
+        position: absolute; left: 18px; bottom: 18px;
+        width: 140px; height: 140px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.06);
+        border: 1px solid rgba(255,255,255,.12);
+        backdrop-filter: blur(6px);
+        pointer-events: auto;
+        touch-action: none;
+      }
+      #stick {
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: 64px; height: 64px;
+        border-radius: 999px;
+        background: rgba(249,115,22,.75);
+        border: 1px solid rgba(0,0,0,.25);
+      }
+      #btnJump, #btnRestart {
+        position: absolute; right: 18px;
+        width: 88px; height: 88px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.08);
+        color: #fff;
+        font-weight: 700;
+        pointer-events: auto;
+        touch-action: none;
+      }
+      #btnJump { bottom: 18px; }
+      #btnRestart { bottom: 118px; width: 64px; height: 64px; border-radius: 16px; font-weight: 800; }
+
+      @media (pointer: coarse) {
+        #touch { display: block; }
+        #centerTip { display: none !important; }
+      }
+
       canvas { display:block; }
       a { color:#93c5fd; }
     </style>
@@ -29,9 +71,21 @@
     <div id="hud">
       <span class="pill"><span class="k">Coins:</span> <span id="coins">0</span></span>
       <span class="pill"><span class="k">Deaths:</span> <span id="deaths">0</span></span>
-      <div class="k" style="margin-top:6px">Move: A/D or ←/→ · Jump: Space/W/↑ · Restart: R</div>
+      <div class="k" style="margin-top:6px">
+        Desktop: A/D or ←/→ · Jump: Space/W/↑ · Restart: R
+        <br />Mobile: touch joystick + Jump · Restart
+      </div>
     </div>
-    <div id="centerTip">Click to lock pointer · <span class="k">Esc</span> to unlock</div>
+
+    <div id="centerTip">Click to lock pointer (desktop) · <span class="k">Esc</span> to unlock</div>
+
+    <!-- Mobile controls -->
+    <div id="touch" aria-hidden="true">
+      <div id="stickBase"><div id="stick"></div></div>
+      <button id="btnJump" type="button">JUMP</button>
+      <button id="btnRestart" type="button">R</button>
+    </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
